@@ -30,7 +30,7 @@ async function readSheet() {
     });
     
     const valuesFromSheet = infoObjectFromSheet.data.values;
-    console.log(valuesFromSheet);
+    return valuesFromSheet;
   }
   catch(err) {
     console.log("readSheet func() error", err);  
@@ -38,8 +38,8 @@ async function readSheet() {
 }
 
 app.get('/fetch', (req, res) => {
-  res.send('Loaded Google Sheet ...');
-  readSheet();
+  valuesFromSheet = readSheet();
+  res.send(valuesFromSheet);
 });
 
 app.listen(port, () => {
