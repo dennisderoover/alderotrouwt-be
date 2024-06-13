@@ -1,6 +1,9 @@
 require('dotenv').config();
 
 const { google } = require('googleapis');
+const express = require('express');
+const app = express();
+const port = 3000;
 
 const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
 const privateKey = process.env.GOOGLE_PRIVATE_KEY;
@@ -34,4 +37,11 @@ async function readSheet() {
   }
 }
 
-readSheet();
+app.get('/fetch', (req, res) => {
+  res.send('Loaded Google Sheet ...');
+  readSheet();
+});
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`)
+});
