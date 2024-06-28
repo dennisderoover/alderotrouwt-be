@@ -1,9 +1,14 @@
 require('dotenv').config();
 
-const { google } = require('googleapis');
 const express = require('express');
+const cors = require('cors'); 
+
+const { google } = require('googleapis');
+
+const port = process.env.PORT || 4500;
+
 const app = express();
-const port = 3000;
+app.use(cors());
 
 const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
 const privateKey = process.env.GOOGLE_PRIVATE_KEY;
@@ -38,10 +43,11 @@ async function readSheet() {
 }
 
 app.get('/fetch', (req, res) => {
-  valuesFromSheet = readSheet();
-  res.send(valuesFromSheet);
+  readSheet().then(result => {
+    res.send(result)
+  })
 });
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
+  console.log(`aldertrouwt_backend listening on port ${port}`)
 });
