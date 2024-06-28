@@ -49,7 +49,7 @@ function mapToGoogleSheetResult(valuesFromSheet) {
     firstName: line.firstName,
     lastName: line.lastName,
     householdId: Number(line.householdId), // Convert householdId to number
-    invitedFor: line.invitedFor.replace(/ /g, '').split(',').map(activity => {
+    invitedFor: line.invitedFor ? line.invitedFor.replace(/ /g, '').split(',').map(activity => {
       switch (activity.toLowerCase()) {
         case 'antwerp': return Activity.ANTWERP;
         case 'ceremony': return Activity.CEREMONY;
@@ -57,7 +57,7 @@ function mapToGoogleSheetResult(valuesFromSheet) {
         case 'party': return Activity.PARTY;
         default: throw new Error(`Unknown activity: ${activity}`);
       }
-    }) // Convert invitedFor to Activity[]
+    }): [] // Convert invitedFor to Activity[]
   }));
 
   return guests;
