@@ -35,6 +35,8 @@ const writeSuccessMessage = 'Aanwezigheden succesvol opgeslagen!';
 const writeErrorMessage = 'Er ging iets mis bij het opslagen van de aanwezigheden!';
 const readSuccessMessage = 'Sheet met succes uitgelezen!';
 const readErrorMessage = 'Er ging iets mis bij het uitlezen van de sheet!';
+const checkMark = '✓';
+const cross = '✗';
 
 function mapToGoogleSheetResult(valuesFromSheet) {
   // Extract the headers
@@ -50,12 +52,8 @@ function mapToGoogleSheetResult(valuesFromSheet) {
   });
 
   // Transform the data objects to Guest objects
-  const guests = dataObjects.map(line => ({
-    id: Number(line.id), // Convert id to number
-    firstName: line.firstName,
-    lastName: line.lastName,
-    householdId: Number(line.householdId), // Convert householdId to number
-    invitedFor: line.invitedFor ? line.invitedFor.replace(/ /g, '').split(',').map(activity => {
+  const guests = dataObjects.map(line => {
+    const invitedFor = line.invitedFor ? line.invitedFor.replace(/ /g, '').split(',').map(activity => {
       switch (activity.toLowerCase()) {
         case 'antwerp': return Activity.ANTWERP;
         case 'ceremony': return Activity.CEREMONY;
@@ -63,8 +61,50 @@ function mapToGoogleSheetResult(valuesFromSheet) {
         case 'party': return Activity.PARTY;
         default: throw new Error(`Unknown activity: ${activity}`);
       }
-    }): [] // Convert invitedFor to Activity[]
-  }));
+    }): [];
+    
+    const alreadyReplied = !!(
+      line.ANTWERP ||
+      line.CEREMONY ||
+      line.DINER ||
+      line.PARTY
+    )
+
+    const attending = [];
+    
+    if (alreadyReplied) {
+      if (invitedFor.includes(Activity.ANTWERP)) {
+        attending.push({
+          antwerp: line.ANTWERP === checkMark
+        })
+      }
+      if (invitedFor.includes(Activity.CEREMONY)) {
+        attending.push({
+          ceremony: line.CEREMONY === checkMark
+        })
+      }
+      if (invitedFor.includes(Activity.DINER)) {
+        attending.push({
+          diner: line.DINER === checkMark
+        })
+      }
+      if (invitedFor.includes(Activity.PARTY)) {
+        attending.push({
+          party: line.PARTY === checkMark
+        })
+      }
+    }
+
+    return {
+      id: Number(line.id),
+      firstName: line.firstName,
+      lastName: line.lastName,
+      householdId: Number(line.householdId),
+      invitedFor,
+      alreadyReplied,
+      attending,
+    }
+  });
 
   return guests;
 }
@@ -100,7 +140,7 @@ async function writeToSheet(sheetValues, attendances) {
     await sheetInstance.spreadsheets.values.update({
       auth: googleAuth,
       spreadsheetId: googleSheetId,
-      range: `${googleSheetPage}!A1:J101`,
+      range: `${googleSheetPage}!A1:K101`,
       valueInputOption: 'USER_ENTERED',
       resource: {
         values: sheetValues.map((r) => 
@@ -112,10 +152,11 @@ async function writeToSheet(sheetValues, attendances) {
               r[3],
               r[4],
               r[5],
-              attendances.find((att) => att.guest.id === Number(r[0])).antwerp === 'COMING' ? '✓' : '✗',
-              attendances.find((att) => att.guest.id === Number(r[0])).ceremony === 'COMING' ? '✓' : '✗',
-              attendances.find((att) => att.guest.id === Number(r[0])).diner === 'COMING' ? '✓' : '✗',
-              attendances.find((att) => att.guest.id === Number(r[0])).party === 'COMING' ? '✓' : '✗',
+              attendances.find((att) => att.guest.id === Number(r[0])).antwerp === 'COMING' ? checkMark : cross,
+              attendances.find((att) => att.guest.id === Number(r[0])).ceremony === 'COMING' ? checkMark : cross,
+              attendances.find((att) => att.guest.id === Number(r[0])).diner === 'COMING' ? checkMark : cross,
+              attendances.find((att) => att.guest.id === Number(r[0])).party === 'COMING' ? checkMark : cross,
+              attendances.find((att) => att.guest.id === Number(r[0])).remarks,
             ]
             : r
         )
@@ -140,6 +181,10 @@ app.get('/fetch', (req, res) => {
 app.post('/submit', (req, res) => {
   readSheet().then(sheetValues => {
     writeToSheet(sheetValues, req.body).then(resultMessage => {
+      if (resultMessage === writeErrorMessage) {
+        res.status(500);
+      }
+
       res.send({
         message: resultMessage
       });
